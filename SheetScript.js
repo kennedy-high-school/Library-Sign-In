@@ -7,6 +7,7 @@
  */
 var scriptCache = CacheService.getScriptCache();
 var staticVars = JSON.parse(PropertiesService.getScriptProperties().getProperty("static"));
+var scriptVersion = "0.3.2";
 
 /**
  * Determining what to do.
@@ -16,9 +17,6 @@ function onEdit(e) {
     var lock = LockService.getScriptLock();
     e.rangeLength = e.range.getValues().length; //Extra property for later use
     if (e.rangeLength == 1) {
-        e.eIn = e.range.offset(0, staticVars.timeOffset.rIn);
-        e.eOut = e.range.offset(0, staticVars.timeOffset.rOut);
-        e.location = scriptCache.get(e.value);
         e.sheet = e.range.getSheet();
         var newE = checkProblems(e);
         if (newE) { //If it doesn't return "false"
@@ -67,13 +65,37 @@ function signInOut(e) {
  * @returns {Object|Boolean} e - Edit information fixed, etc.
  */
 function checkProblems(e) {
+    var fail = false; //Determines if it should move on to the next part of the script
     var idRange = e.sheet.getRange(e.range.getRow(), 1);
+    if (typeof e.value === "string" && e.value.search(/\D/g) > -1) {
+        e.value = e.value.replace(/\D/g, "");
+        e.range.setValue(e.value);
+    }
+    e.location = scriptCache.get(e.value);
     if (staticVars.validColumns.indexOf(e.range.getLastColumn()) == -1) { //Checking if it's in the right column
+        if (e.oldValue) {
+            e.range.setValue(e.oldValue);
+        }
+        else {
+            e.range.setValue("");
+        }
         e.sheet.setActiveSelection(idRange);
         e.range = e.sheet.getActiveRange();
+        if (typeof e.value === "string") {
+            idRange.setValue(e.value);
+        }
+        else {
+            fail = true;
+        }
     }
+    e.eIn = e.range.offset(0, staticVars.timeOffset.rIn);
+    e.eOut = e.range.offset(0, staticVars.timeOffset.rOut);
     if (typeof e.value !== "string") { //Will be an object if the current value is blank
-        clearIt(e, true);
+        fail = true;
+    }
+
+    if (fail) {
+        clearIt(e);
         return false;
     }
     return e;
@@ -96,6 +118,7 @@ function getTime() {
 function clearIt(e, del) {
     del = del || false;
     if (del) {
+        e.oldValue = e.oldValue.slice(0, -2);
         scriptCache.remove(e.oldValue);
     }
     else if (e.location || scriptCache.get(e.value)) {
@@ -104,4 +127,12 @@ function clearIt(e, del) {
     e.eIn.setValue("");
     e.eOut.setValue("");
     e.range.setValue("");
+}
+
+/**
+ * Get the version that the script is currently on
+ * @returns {string}
+ */
+function getScriptVersion() {
+    return scriptVersion;
 }
