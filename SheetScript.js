@@ -67,7 +67,7 @@ function signInOut(e) {
 function checkProblems(e) {
     var fail = false; //Determines if it should move on to the next part of the script
     var idRange = e.sheet.getRange(e.range.getRow(), 1);
-    if (typeof e.value === "string" && e.value.search(/\D/g) > -1) {
+    if (typeof e.value === "string" && e.value.search(/\D/g) > -1) { //Removing any non-number characters
         e.value = e.value.replace(/\D/g, "");
         e.range.setValue(e.value);
     }
